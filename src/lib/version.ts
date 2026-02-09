@@ -2,18 +2,18 @@
 
 'use client';
 
-const CURRENT_VERSION = '3.8.2';
+const CURRENT_VERSION = '3.8.8';
 
 // 版本检查结果枚举
 export enum UpdateStatus {
   HAS_UPDATE = 'has_update', // 有新版本
-  NO_UPDATE = 'no_update', // 无新版本
+  NO_UPDATE = 'no_update', // 已是最新
   FETCH_FAILED = 'fetch_failed', // 获取失败
 }
 
 // 远程版本检查URL配置
 const VERSION_CHECK_URLS = [
-  'https://raw.githubusercontent.com/Stardm0/MoonTV/main/VERSION.txt',
+  'https://raw.githubusercontent.com/money1031/TMoonTV/main/VERSION.txt',
 ];
 
 /**

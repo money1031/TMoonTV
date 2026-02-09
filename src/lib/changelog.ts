@@ -11,6 +11,44 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "3.8.9",
+    date: "2026-02-09",
+    added: [
+    "更新版本号到 3.8.9",
+    "添加邀请码注册机制",
+    "添加参数INVITE_VERIFY_KEY，用于查看当前邀请码",
+    "📱 添加支持平台Android - 最低支持 Android 5.0 (API 21)",
+    "📱 添加支持平台iOS - 最低支持 iOS 13.0",
+    "📱 添加支持平台macOS - 最低支持 macOS 11.0 (Big Sur)",
+    "📱 添加支持平台Windows - 最低支持 Windows 10"
+    ],
+    changed: [
+    "更改默认登录页面",
+    "更改默认注册页",
+    "添加支持平台按钮，方便前往下载"
+    ],
+    fixed: [
+    "无"
+    ]
+  },
+  {
+    version: "3.8.8",
+    date: "2026-02-09",
+    added: [
+    "更新版本号到 3.8.8",
+    "添加邀请码注册机制",
+    "添加参数INVITE_VERIFY_KEY，用于查看当前邀请码"
+    ],
+    changed: [
+    "更改默认登录页面",
+    "更改默认注册页",
+    "添加支持平台按钮，方便前往下载"
+    ],
+    fixed: [
+    "无"
+    ]
+  },
+  {
     version: "3.8.2",
     date: "2026-01-04",
     added: [

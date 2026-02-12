@@ -2980,7 +2980,6 @@ function AdminPageClient() {
   // ⭐ 邀请码管理
   const [inviteCodes, setInviteCodes] = useState<string[]>([]);
   const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteCount, setInviteCount] = useState(5);
 
   // 获取管理员配置
   // showLoading 用于控制是否在请求期间显示整体加载骨架。
@@ -3088,8 +3087,6 @@ function AdminPageClient() {
     try {
       const res = await fetch('/api/admin/invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count: inviteCount }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -3232,14 +3229,7 @@ function AdminPageClient() {
                     <span className='text-sm text-gray-500'>
                       当前未使用邀请码（{inviteCodes.length} 个）
                     </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={inviteCount}
-                      onChange={(e) => setInviteCount(Number(e.target.value))}
-                      className="w-20 px-2 py-1 border rounded text-sm"
-                    />
+
                     <button
                       onClick={refreshInviteCodes}
                       disabled={inviteLoading}

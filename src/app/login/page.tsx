@@ -1,17 +1,45 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 'use client';
 
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-
-import { checkForUpdates, CURRENT_VERSION, UpdateStatus } from '@/lib/version';
-
 import { useSite } from '@/components/SiteProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { checkForUpdates, CURRENT_VERSION, UpdateStatus } from '@/lib/version';
+import { motion } from 'framer-motion';
 
-// 版本显示组件
+/* ---------- 按钮 ---------- */
+interface LoadingButtonProps {
+  loading: boolean;
+  onClick?: () => void;
+  children: string;
+  className?: string;
+  type?: 'button' | 'submit';
+}
+
+function LoadingButton({
+  loading,
+  onClick,
+  children,
+  className = '',
+  type = 'button',
+}: LoadingButtonProps) {
+  return (
+    <button
+      type={type}
+      disabled={loading}
+      onClick={onClick}
+      className={`flex-1 py-3 rounded-lg text-white transition transform duration-150 ease-out
+        ${loading ? 'bg-gray-400 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}
+        ${className}`}
+    >
+      {loading ? `正在${children}` : children}
+    </button>
+  );
+}
+
+/* ---------- 版本显示组件 ---------- */
 function VersionDisplay() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
   const [isChecking, setIsChecking] = useState(true);
@@ -34,19 +62,20 @@ function VersionDisplay() {
   return (
     <button
       onClick={() =>
-        window.open('https://github.com/Stardm0/MoonTV', '_blank')
+        window.open('https://github.com/money1031/TMoonTV', '_blank')
       }
       className='absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 transition-colors cursor-pointer'
     >
       <span className='font-mono'>v{CURRENT_VERSION}</span>
       {!isChecking && updateStatus !== UpdateStatus.FETCH_FAILED && (
         <div
-          className={`flex items-center gap-1.5 ${updateStatus === UpdateStatus.HAS_UPDATE
+          className={`flex items-center gap-1.5 ${
+            updateStatus === UpdateStatus.HAS_UPDATE
               ? 'text-yellow-600 dark:text-yellow-400'
               : updateStatus === UpdateStatus.NO_UPDATE
                 ? 'text-green-600 dark:text-green-400'
                 : ''
-            }`}
+          }`}
         >
           {updateStatus === UpdateStatus.HAS_UPDATE && (
             <>
@@ -66,172 +95,205 @@ function VersionDisplay() {
   );
 }
 
+/* ---------- 主页面 ---------- */
 function LoginPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [shouldAskUsername, setShouldAskUsername] = useState(false);
-  const [enableRegister, setEnableRegister] = useState(false);
   const { siteName } = useSite();
 
-  // 在客户端挂载后设置配置
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storageType = (window as any).RUNTIME_CONFIG?.STORAGE_TYPE;
-      setShouldAskUsername(storageType && storageType !== 'localstorage');
-      setEnableRegister(
-        Boolean((window as any).RUNTIME_CONFIG?.ENABLE_REGISTER)
-      );
-    }
-  }, []);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [enableRegister, setEnableRegister] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  /* 注册成功 Modal */
+  const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
+
+  /* ---------- 登录 ---------- */
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!password || (shouldAskUsername && !username)) return;
-
-    try {
-      setLoading(true);
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          password,
-          ...(shouldAskUsername ? { username } : {}),
-        }),
-      });
-
-      if (res.ok) {
-        const redirect = searchParams.get('redirect') || '/';
-        router.replace(redirect);
-      } else if (res.status === 401) {
-        setError('密码错误');
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? '服务器错误');
-      }
-    } catch (error) {
-      setError('网络错误，请稍后重试');
-    } finally {
-      setLoading(false);
+    if (!username || !password) {
+      setError('用户名或密码不能为空');
+      return;
     }
-  };
 
-  // 处理注册逻辑
-  const handleRegister = async () => {
-    setError(null);
-    if (!password || !username) return;
-
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await fetch('/api/register', {
+      const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
       if (res.ok) {
-        const redirect = searchParams.get('redirect') || '/';
-        router.replace(redirect);
+        const target = searchParams.get('redirect') || '/';
+        router.replace(target);
+        router.refresh();
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? '服务器错误');
+        setError(data.error ?? '登录失败');
       }
-    } catch (error) {
-      setError('网络错误，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---------- 注册 ---------- */
+  const handleRegister = async () => {
+    setError(null);
+
+    if (!username || !password || !inviteCode) {
+      setError('用户名、密码或邀请码不能为空');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, inviteCode }),
+      });
+
+      if (res.ok) {
+        setShowRegisterSuccess(true);
+        setEnableRegister(false);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? '注册失败');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className='relative min-h-screen flex items-center justify-center px-4 overflow-hidden'>
-      <div className='absolute top-4 right-4'>
+    <motion.div
+      className="relative min-h-screen flex items-center justify-center px-4"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+    >
+      <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      <div className='relative z-10 w-full max-w-md rounded-3xl bg-gradient-to-b from-white/90 via-white/70 to-white/40 dark:from-zinc-900/90 dark:via-zinc-900/70 dark:to-zinc-900/40 backdrop-blur-xl shadow-2xl p-10 dark:border dark:border-zinc-800'>
-        <h1 className='text-green-600 tracking-tight text-center text-3xl font-extrabold mb-8 bg-clip-text drop-shadow-sm'>
+
+      <motion.div
+        key={enableRegister ? 'register' : 'login'}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.3 }}
+        className="w-full max-w-md rounded-3xl bg-white/80 dark:bg-zinc-900/80 p-10 shadow-2xl"
+      >
+        <h1 className="text-center text-3xl font-extrabold mb-8 text-green-600">
           {siteName}
         </h1>
-        <form onSubmit={handleSubmit} className='space-y-8'>
-          {shouldAskUsername && (
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          <input
+            placeholder="用户名"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            className="w-full rounded-lg px-4 py-3"
+          />
+          <input
+            type="password"
+            placeholder="密码"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            className="w-full rounded-lg px-4 py-3"
+          />
+
+          {enableRegister && (
             <div>
-              <label htmlFor='username' className='sr-only'>
-                用户名
-              </label>
               <input
-                id='username'
-                type='text'
-                autoComplete='username'
-                className='block w-full rounded-lg border-0 py-3 px-4 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-white/60 dark:ring-white/20 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none sm:text-base bg-white/60 dark:bg-zinc-800/60 backdrop-blur'
-                placeholder='输入用户名'
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                placeholder="邀请码（请向管理员获取）"
+                value={inviteCode}
+                onChange={e => setInviteCode(e.target.value)}
+                className="w-full rounded-lg px-4 py-3"
               />
             </div>
           )}
 
-          <div>
-            <label htmlFor='password' className='sr-only'>
-              密码
-            </label>
-            <input
-              id='password'
-              type='password'
-              autoComplete='current-password'
-              className='block w-full rounded-lg border-0 py-3 px-4 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-white/60 dark:ring-white/20 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none sm:text-base bg-white/60 dark:bg-zinc-800/60 backdrop-blur'
-              placeholder='输入访问密码'
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+          {error && <p className="text-red-600 text-sm">{error}</p>}
+
+          <div className="flex gap-4">
+            {enableRegister ? (
+              <>
+                <LoadingButton loading={loading} onClick={handleRegister} className="bg-blue-600">
+                  注册
+                </LoadingButton>
+                <LoadingButton loading={loading} onClick={() => setEnableRegister(false)} className="bg-green-600">
+                  返回登录
+                </LoadingButton>
+              </>
+            ) : (
+              <>
+                <LoadingButton loading={loading} type="submit" className="bg-green-600">
+                  登录
+                </LoadingButton>
+                <LoadingButton loading={loading} onClick={() => setEnableRegister(true)} className="bg-blue-600">
+                  开启注册
+                </LoadingButton>
+              </>
+            )}
           </div>
-
-          {error && (
-            <p className='text-sm text-red-600 dark:text-red-400'>{error}</p>
-          )}
-
-          {/* 登录 / 注册按钮 */}
-          {shouldAskUsername && enableRegister ? (
-            <div className='flex gap-4'>
-              <button
-                type='button'
-                onClick={handleRegister}
-                disabled={!password || !username || loading}
-                className='flex-1 inline-flex justify-center rounded-lg bg-blue-600 py-3 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50'
-              >
-                {loading ? '注册中...' : '注册'}
-              </button>
-              <button
-                type='submit'
-                disabled={
-                  !password || loading || (shouldAskUsername && !username)
-                }
-                className='flex-1 inline-flex justify-center rounded-lg bg-green-600 py-3 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:from-green-600 hover:to-blue-600 disabled:cursor-not-allowed disabled:opacity-50'
-              >
-                {loading ? '登录中...' : '登录'}
-              </button>
-            </div>
-          ) : (
-            <button
-              type='submit'
-              disabled={
-                !password || loading || (shouldAskUsername && !username)
-              }
-              className='inline-flex w-full justify-center rounded-lg bg-green-600 py-3 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:from-green-600 hover:to-blue-600 disabled:cursor-not-allowed disabled:opacity-50'
-            >
-              {loading ? '登录中...' : '登录'}
-            </button>
-          )}
         </form>
-      </div>
 
-      {/* 版本信息显示 */}
+        {/* ⭐ 下载按钮优化（两行 / 不失真 / 立体） */}
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          {[
+            ['Android', 'https://img.shields.io/badge/Android-5.0+(API_21)-3DDC84?logo=android', 'https://wwbow.lanzouu.com/b019vo60tc'],
+            ['iOS', 'https://img.shields.io/badge/iOS-13.0+-000000?logo=ios', 'https://wwbow.lanzouu.com/b019vo615e'],
+            ['macOS', 'https://img.shields.io/badge/macOS-11.0+-000000?logo=apple', 'https://wwbow.lanzouu.com/b019vo60yh'],
+            ['Windows', 'https://img.shields.io/badge/Windows-10+-0078D6?logo=windows', 'https://wwbow.lanzouu.com/b019vo619i'],
+          ].map(([name, img, url]) => (
+            <button
+              key={name}
+              title={`${name} - 点击前往下载，密码6666`}
+              onClick={() => window.open(url, '_blank')}
+              className="flex items-center justify-center h-12 rounded-lg bg-white dark:bg-zinc-800 shadow-md hover:shadow-lg hover:scale-[1.03] active:scale-95 transition"
+            >
+              <img
+                src={img}
+                alt={name}
+                className="h-6 w-auto object-contain"
+              />
+            </button>
+          ))}
+        </div>
+
+        {/* ⭐ 新增说明注释 */}
+        <p className="mt-5 text-xs leading-relaxed text-center text-gray-500 dark:text-gray-400">
+          APP客户端保证原汁原味的同时，优化了移动端和桌面端操作体验。它基于 Flutter 构建，
+          目前支持 Android、iOS、macOS 和 Windows 平台。点击对应操作系统图标前往下载，
+          密码均为 <span className="font-semibold text-gray-600 dark:text-gray-300">6666</span>
+        </p>
+      </motion.div>
+
       <VersionDisplay />
-    </div>
+
+      {/* 注册成功 Modal */}
+      {showRegisterSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 p-6 text-center">
+            <h3 className="text-lg font-bold mb-4 text-green-600">注册成功</h3>
+            <p className="text-sm mb-6">现在可以使用你的账号登录了</p>
+            <button
+              onClick={() => setShowRegisterSuccess(false)}
+              className="w-full py-2 rounded-lg bg-green-600 text-white hover:scale-105 active:scale-95 transition"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+    </motion.div>
   );
 }
 

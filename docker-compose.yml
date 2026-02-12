@@ -1,0 +1,48 @@
+
+services:
+  tmoontv-core:
+    image: thomass/tmoontv:latest   # 使用你自己构建的镜像
+    container_name: tmoontv-core
+    restart: always
+    ports:
+      - '3000:3000'         # 暴露给本机浏览器访问
+    environment:
+      - USERNAME=thomass      # 管理员账户名
+      - PASSWORD=hexiaotianSKY@126.com      # 管理员账户密码
+      - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+      - KVROCKS_URL=redis://tmoontv-kvrocks:6666  # 连接新建数据库
+    networks:
+      - tmoontv-network
+    depends_on:
+      - tmoontv-kvrocks
+
+  tmoontv-kvrocks:
+    image: apache/kvrocks
+    container_name: tmoontv-kvrocks
+    restart: always
+    volumes:
+      - tmoontv-kvrocks-data:/var/lib/kvrocks
+    networks:
+      - tmoontv-network
+  
+  danmu-api:
+    image: logvar/danmu-api:latest
+    container_name: tmoontv-danmu-api
+    restart: always
+    ports:
+      - "3333:9321"
+    environment:
+      - TOKEN=523343732 # 设置访问token
+      - ADMIN_TOKEN=88415470 # 设置管理员访问token
+    volumes:
+      - ./.chche:/app/.cache
+    networks:
+      - tmoontv-network
+
+networks:
+  tmoontv-network:
+    driver: bridge
+
+volumes:
+  tmoontv-kvrocks-data:
+
